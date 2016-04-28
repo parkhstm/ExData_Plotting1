@@ -1,0 +1,104 @@
+---
+title: "Ex_data_plotting assignment"
+author: "Hosub Park"
+date: "Apr 28, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+##Overview of data description
+Measurements of electric power consumption in one household with a one-minute sampling rate over a period of almost 4 years. Different electrical quantities and some sub-metering values are available.
+The following descriptions of the 9 variables in the dataset are taken from the UCI web site:
+ * Date: Date in format dd/mm/yyyy
+ * Time: time in format hh:mm:ss
+ * Global_active_power: household global minute-averaged active power (in kilowatt)
+ * Global_reactive_power: household global minute-averaged reactive power (in kilowatt)
+ * Voltage: minute-averaged voltage (in volt)
+ * Global_intensity: household global minute-averaged current intensity (in ampere)
+ * Sub_metering_1: energy sub-metering No. 1 (in watt-hour of active energy). It corresponds to the kitchen, containing mainly a dishwasher, an oven and a microwave (hot plates are not electric but gas powered).
+ * Sub_metering_2: energy sub-metering No. 2 (in watt-hour of active energy). It corresponds to the laundry room, containing a washing-machine, a tumble-drier, a refrigerator and a light.
+ * Sub_metering_3: energy sub-metering No. 3 (in watt-hour of active energy). It corresponds to an electric water-heater and an air-conditioner.
+
+
+##Find location of data to extract
+This codes are just for the record. To reproduce plotting, start from next chunk.
+raw data file is placed in working directory
+```{r}
+#read raw data
+previewdb <- read.table(file="household_power_consumption.txt",nrows=100)
+head(previewdb)
+#This data has header, use ";" as seperator, "?" as NA
+
+#find location
+readDB <- read.table(file="household_power_consumption.txt", header=T, sep=";", na.string="?")
+head(unique(readDB[,1]),20)#investigate data format of 'Date'
+
+start_row <- head(which(readDB[,1]=="1/2/2007"), 1) #row number of start of data interested
+last_row <- tail(which(readDB[,1]=="2/2/2007"), 1) #row number of end of data interested
+```
+```{r}
+start_row
+last_row
+```
+
+#For plotting data, Start from here.
+##extract data & processing Date and Time
+```{r}
+start_row <- 66637; last_row <- 69516 #these numbers are from previous chunk.
+header_db <- read.table(file="household_power_consumption.txt", header=F, sep=";", na.string="?", stringsAsFactors=FALSE, nrow=1)
+ext_db <- read.table(file="household_power_consumption.txt", header=F, sep=";", na.string="?", stringsAsFactors=FALSE, skip=start_row, nrows=last_row-start_row+1)
+
+#put header
+ext_data <- ext_db 
+colnames(ext_data) <- header_db
+
+#processing Date and Time
+datetime <- strptime(paste(ext_data$Date, ext_data$Time, sep=" "), format="%d/%m/%Y %T", tz = "UTC") #make Date and Time as posixlt
+wdays <- strftime(datetime, format="%A")
+proc_data <- cbind(datetime, wdays, ext_data) 
+```
+##Plot 1
+```{r}
+png(filename = "plot1.png", width = 480, height = 480)
+hist(proc_data$Global_active_power, xlab="Global active power(kilowatts)", main="Global active power", col="red")
+dev.off()
+```
+
+##Plot2
+```{r}
+png(filename = "plot2.png", width = 480, height = 480)
+plot(proc_data$Global_active_power~proc_data$datetime, type="l", ylab="Global active power(kilowatts)")
+dev.off()
+```
+
+##Plot3
+```{r}
+png(filename = "plot3.png", width = 480, height = 480)
+plot(proc_data$Sub_metering_1~proc_data$datetime, type="l", ylab="Energy sub metering")
+lines(proc_data$Sub_metering_2~proc_data$datetime, col="red")
+lines(proc_data$Sub_metering_3~proc_data$datetime, col="blue")
+legend("topright",col=c("black","red","blue"), lty=c(1,1,1), legend=c("Sub_metering_1","Sub_metering_2","Sub_metering_3"))
+dev.off()
+```
+
+##Plot4
+```{r}
+png(filename = "plot4.png", width = 480, height = 480)
+
+par(mfrow=c(2,2)) #setting multiplot
+
+plot(proc_data$Global_active_power~proc_data$datetime, type="l", ylab="Global active power(kilowatts)")#location(1,1)
+
+plot(proc_data$Voltage~proc_data$datetime, type="l", xlab="datetime", ylab="Voltage")#location(1,2)
+
+plot(proc_data$Sub_metering_1~proc_data$datetime, type="l", ylab="Energy sub metering")#location(2,1)
+lines(proc_data$Sub_metering_2~proc_data$datetime, col="red")
+lines(proc_data$Sub_metering_3~proc_data$datetime, col="blue")
+legend("topright",col=c("black","red","blue"), lty=c(1,1,1), legend=c("Sub_metering_1","Sub_metering_2","Sub_metering_3"))
+
+plot(proc_data$Global_reactive_power~proc_data$datetime, type="h", xlab="datetime", ylab="Global_reactive_power") #location(2,2)
+par(mfrow=c(1,1)) #reset multiplot setting
+dev.off()
+```
